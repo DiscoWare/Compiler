@@ -1,0 +1,14 @@
+x = 1 + 2;        
+a = 1 + 42;     
+b = x - 2; 
+variable1 = x;
+variable2 = 69;     
+int i = 54;          
+int j = 3;    
+status = 2 + x;   
+if (x < y)
+    x = y;    
+while (i < 100)
+    x = x + 1;  
+while (i < 100)
+    x = 1;                                                                                                                                                                 
