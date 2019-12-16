@@ -123,6 +123,9 @@ void assemblyAssignment()
     
 };
 
+//////////////////////////////////////////////////////////////
+// Get memory address of variables already declared variables
+//////////////////////////////////////////////////////////////
 int getAddress(const string& sym)
 {
     vector<Symbol>::const_iterator x = symbolVec.cbegin();
@@ -136,6 +139,9 @@ int getAddress(const string& sym)
     return -1;
 }
 
+/////////////////////////////////////////////////////////
+// Expression function
+/////////////////////////////////////////////////////////
 void assemblyExpression()
 {
     Instruction newInstruction;
