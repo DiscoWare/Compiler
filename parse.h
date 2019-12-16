@@ -58,12 +58,11 @@ ofstream parseOutput;
 ofstream assemblyOutput;
 stack<char> Stack;
 vector<Token> tokenVec;
-vector<Token>::const_iterator currentToken;
-vector<Instruction> instructionVec;
-vector<Symbol> symbolVec;
-int memoryLocation = 2000;
-int assignmentMemLocation = -1;
-Symbol* currentSymbol;
+vector<Token>::const_iterator currentToken;           
+vector<Instruction> instructionVec;                   // Vector for all assembly instructions
+vector<Symbol> symbolVec;                             // This is basically the symbol table
+int memoryLocation = 2000;                            // Initialized at address 2000
+int assignmentMemLocation = -1;                       // Memory location of current assignment statement
 
 ////////////////////////////////
 // Production Table
@@ -110,7 +109,6 @@ void assemblyAssignment()
         assignmentMemLocation = memoryLocation;
         memoryLocation++;
         symbolVec.push_back(newSymbol);
-        currentSymbol = &symbolVec[symbolVec.size() - 1];
     }
     else
     {
