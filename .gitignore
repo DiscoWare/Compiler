@@ -1,4 +1,6 @@
 main
 output.txt
 tokens.txt
+.vscode
+parseOutput.txt
 

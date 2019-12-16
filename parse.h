@@ -16,11 +16,38 @@ void Driver();
 /////////////////////////////////////
 struct Token
 {
-    Token(const string& token, const string& lexeme) {token_ = token; lexeme_ = lexeme; };
+    Token(const string& token, const string& lexeme) { token_ = token; lexeme_ = lexeme; };
     Token() {};
 
     string token_;
     string lexeme_;
+};
+
+///////////////////////////////////////
+// Instruction struct 
+///////////////////////////////////////
+struct Instruction
+{
+    Instruction(const string& Op, const int Oprnd) { Op_ = Op; Oprnd_ = Oprnd; }
+    Instruction() { Oprnd_ = 0; }
+
+    string Op_;
+    int Oprnd_;
+};
+
+///////////////////////////////////////
+// Symbol Struct
+///////////////////////////////////////
+struct Symbol
+{
+    Symbol(const string& Identifier, int MemoryLocation, const string& Type) 
+        { Identifier_ = Identifier; MemoryLocation_ = MemoryLocation; Type_ = Type; }
+    Symbol()
+        { MemoryLocation_ = 0; }
+
+    string Identifier_;
+    int MemoryLocation_;
+    string Type_;
 };
 
 ////////////////////////////////
@@ -28,9 +55,15 @@ struct Token
 ////////////////////////////////
 string workingString;
 ofstream parseOutput;
+ofstream assemblyOutput;
 stack<char> Stack;
 vector<Token> tokenVec;
 vector<Token>::const_iterator currentToken;
+vector<Instruction> instructionVec;
+vector<Symbol> symbolVec;
+int memoryLocation = 2000;
+int assignmentMemLocation = -1;
+Symbol* currentSymbol;
 
 ////////////////////////////////
 // Production Table
@@ -43,6 +76,121 @@ string Table[8][9] = {{"A;", "INVALID", "INVALID", "INVALID", "INVALID", "INVALI
                       {"TU", "INVALID", "INVALID", "INVALID", "INVALID", "EPSILON", "EPSILON", "TU", "TU"},
                       {"INVALID", "INVALID", "INVALID", "INVALID", "INVALID", "EPSILON", "INVALID", "ti=E", "INVALID"},
                       {"INVALID", "INVALID", "INVALID", "INVALID", "INVALID", "INVALID", "INVALID", "INVALID", "k(ici)"}};
+
+//////////////////////////////////
+// Find Symbol
+//////////////////////////////////
+bool findSymbol(const string& symbolID)
+{
+    vector<Symbol>::const_iterator iter = symbolVec.cbegin();
+    while (iter != symbolVec.cend())
+    {
+        if (iter->Identifier_ == symbolID)
+            return true;
+        iter++;
+    }
+    return false;
+} 
+
+///////////////////////////////////
+// Assignment Function
+///////////////////////////////////
+void assemblyAssignment()
+{
+    vector<Token>::const_iterator assemblyCurrentToken = currentToken;
+    if (assemblyCurrentToken->lexeme_ == "int")
+    {
+        assemblyCurrentToken++;
+        if (findSymbol(assemblyCurrentToken->lexeme_))
+            cerr << "ERROR. Initialized variable redefined\n";
+    }
+    if (!findSymbol(assemblyCurrentToken->lexeme_))
+    {
+        Symbol newSymbol(assemblyCurrentToken->lexeme_, memoryLocation, "int");
+        assignmentMemLocation = memoryLocation;
+        memoryLocation++;
+        symbolVec.push_back(newSymbol);
+        currentSymbol = &symbolVec[symbolVec.size() - 1];
+    }
+    else
+    {
+        for (auto x : symbolVec)
+        {
+            if (x.Identifier_ == assemblyCurrentToken->lexeme_)
+                assignmentMemLocation = x.MemoryLocation_;
+        }
+    }
+    
+};
+
+int getAddress(const string& sym)
+{
+    vector<Symbol>::const_iterator x = symbolVec.cbegin();
+    while (x != symbolVec.cend())
+    {
+        if (x->Identifier_ == sym)
+            return x->MemoryLocation_;
+        x++;
+    }
+    cerr << "ERROR: " << sym << " NOT A VALID VARIABLE NAME\n";
+    return -1;
+}
+
+void assemblyExpression()
+{
+    Instruction newInstruction;
+    vector<Token>::const_iterator assemblyCurrentToken = currentToken;
+
+    assemblyCurrentToken++;
+    bool complexExpression = (assemblyCurrentToken->lexeme_ != ";");
+    assemblyCurrentToken--;
+    
+    if (!complexExpression)
+    {
+        newInstruction.Op_ = "PUSHI";
+        newInstruction.Oprnd_ = stoi(assemblyCurrentToken->lexeme_);
+        assemblyCurrentToken++;
+        instructionVec.push_back(newInstruction);
+        newInstruction.Op_ = "POPM";
+        newInstruction.Oprnd_ = memoryLocation - 1;
+        instructionVec.push_back(newInstruction);
+    }
+    else
+    {
+        newInstruction.Op_ = "PUSHM";
+        newInstruction.Oprnd_ = getAddress(assemblyCurrentToken->lexeme_);
+        instructionVec.push_back(newInstruction);
+        assemblyCurrentToken++;
+        string oper = assemblyCurrentToken->lexeme_;
+        assemblyCurrentToken++;
+        newInstruction.Oprnd_ = getAddress(assemblyCurrentToken->lexeme_);
+        instructionVec.push_back(newInstruction);
+        if (oper == "+")
+        {
+            newInstruction.Op_ = "ADD";
+            instructionVec.push_back(newInstruction);
+        }
+        else if (oper == "-")
+        {
+            newInstruction.Op_ = "SUB";
+            instructionVec.push_back(newInstruction);
+        }
+        else if (oper == "*")
+        {
+            newInstruction.Op_ = "MUL";
+            instructionVec.push_back(newInstruction);
+        }
+        else if (oper == "/")
+        {
+            newInstruction.Op_ = "DIV";
+            instructionVec.push_back(newInstruction);
+        }
+        newInstruction.Op_ = "POPM";
+        newInstruction.Oprnd_ = assignmentMemLocation;
+        instructionVec.push_back(newInstruction);
+    }
+    
+}
 
 /////////////////////////////////////////
 // Convert To Index for Production Table
@@ -268,12 +416,14 @@ void printNonTerminalInfo()
     {
         case 'S': 
             message = "<Statement> -> <Assignment> | <Declaration> | <Compare>";
+            assemblyAssignment();
             break;
         case 'A': 
             message = "<Assignment> -> id = <Expression>";
             break;
         case 'E': 
             message = "<Expression> -> id <Expression Prime>";
+            assemblyExpression();
             break;
         case 'F': 
             message = "<Expression Prime> -> +id | -id | *id | epsilon";
@@ -326,7 +476,7 @@ void handleNonTerminal(vector<Token>::const_iterator& currentToken)
 void Driver()
 {
     // Driver setup
-    parseOutput.open("output.txt");
+    parseOutput.open("parseOutput.txt");
     Stack.push('$');
     Stack.push('T');
     tokenVec.push_back(Token("SEPARATOR", "$"));
