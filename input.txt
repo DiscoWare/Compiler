@@ -4,4 +4,4 @@ int sum = 0;
 sum = num + nu2m;            
 num = sum * nu2m;
 sum = num / nu2m; 
-   
+    
